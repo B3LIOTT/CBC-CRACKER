@@ -207,7 +207,6 @@ if __name__ == "__main__":
     if choice == 1:
         Pn = fuzzCk()
 
-        print("-----------")
         message = ""
         for v in Pn:
             message += chr(v)
