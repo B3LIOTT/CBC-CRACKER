@@ -199,7 +199,7 @@ if __name__ == "__main__":
     
     print("Choose an option:")
     try:
-        choice = int(input("1 - Decrypt\n2 - Craft\n"))
+        choice = int(input("1 - Decrypt\n"))
     except Exception as e:
         print("Error: ", e)
         exit(1)
