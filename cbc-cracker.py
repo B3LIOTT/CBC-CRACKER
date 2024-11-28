@@ -162,7 +162,23 @@ def fuzzCk(k=0):
         ok = False
         pad_step += 1   
 
-    return Pn
+    return Pn, Dn
+
+
+def buildBlock(desired_plain, block_size, Dn):
+    # add padding to the desired plain text to validate the decryption
+    assert(block_size >= len(desired_plain))
+    block = ""
+    for i in range(len(desired_plain)):
+        block += f"{ord(desired_plain[i])^Dn[i]:02X}"
+
+    pad_len = block_size - len(desired_plain)
+    for j in range(i+1, i+1+pad_len):
+        block += f"{pad_len^Dn[j]:02X}"
+
+    return block
+
+
 
 
 ban = """
@@ -181,7 +197,7 @@ ban = """
             ██║     ██████╔╝███████║██║     █████╔╝ █████╗  ██████╔╝                              
             ██║     ██╔══██╗██╔══██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗                              
             ╚██████╗██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██║  ██║                              
-            ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝                              
+             ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝                              
 
 
 ----------------------------------By @b3liott------------------------------------                                                                                               
@@ -196,19 +212,20 @@ if __name__ == "__main__":
     s = "5D8B334658592F16ED2F130AEC65423A3F880A41630AC7929E72A583CACAF8AF"
     print("Cypher sample: ", s)
     print("Blocks: ", b:=getBlocks(block_size, s))
-    
-    print("Choose an option:")
-    try:
-        choice = int(input("1 - Decrypt\n"))
-    except Exception as e:
-        print("Error: ", e)
-        exit(1)
 
-    if choice == 1:
-        Pn = fuzzCk()
+    input("Press enter to attack...")
+    Pn, Dn = fuzzCk()
 
-        message = ""
-        for v in Pn:
-            message += chr(v)
+    message = ""
+    for v in Pn:
+        message += chr(v)
 
-        print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
+    print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
+
+    craft = input("Do you want to craft a custom cypher, which will lead to a desired plaintext ? (y/n)")
+    if craft.lower() == "y":
+        desired_plain = input("Enter the desired plain text: ")
+        C1 = buildBlock(desired_plain, block_size, Dn)
+        C2 = b[1]
+        new_cypher = blockToCypher(C1 + C2)
+        print(new_cypher)
