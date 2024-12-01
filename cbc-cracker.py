@@ -226,10 +226,17 @@ if __name__ == "__main__":
 
     print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
 
-    craft = input("Do you want to craft a custom cypher, which will lead to a desired plaintext ? (y/n) ")
-    if craft.lower() == "y":
-        desired_plain = input("Enter the desired plain text: ")
-        C1 = buildBlock(desired_plain, block_size, Dn)
-        C2 = b[1]
-        new_cypher = blockToCypher(C1 + C2)
-        print(new_cypher)
+    while True:
+        craft = input("Do you want to craft a custom cypher? Enter your plaintext or type '\\q' to quit: ")
+        if craft.lower() == "\\q":
+            print("Exiting the program.")
+            break
+        elif craft:
+            desired_plain = craft
+            C1 = buildBlock(desired_plain, block_size, Dn)
+            C2 = b[1]
+            new_cypher = blockToCypher(C1 + C2)
+            print(f"Crafted Cypher: {new_cypher}")
+        else:
+            print("Please enter a valid plaintext or '\\q' to quit.")
+
