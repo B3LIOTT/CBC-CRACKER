@@ -109,7 +109,7 @@ def guess(c, x, pad, block_size, Pn, Dn):
 
     Pn[block_size-pad], Dn[block_size-pad] = int_c ^ int_d, int_d
 
-def fuzzCk(k=0):
+def fuzzCk(b, k=0):
     n = len(b)
     pad_step = 1  # always = j+1
     to_print = f"Block: {k+1}\n"
@@ -166,6 +166,10 @@ def fuzzCk(k=0):
 
 
 def buildBlock(desired_plain, block_size, Dn):
+    # recall that C1^D2 = P2
+    # hence if we want C1^D2 = desired_plain
+    # we build C1 as C1 = desired_plain^D2
+    
     # add padding to the desired plain text to validate the decryption
     assert(block_size >= len(desired_plain))
     block = ""
@@ -209,12 +213,13 @@ if __name__ == "__main__":
     block_size = getBlockSize()
     print("Taille des blocks: ", block_size)
     # s = getNextCypher()
-    s = "5D8B334658592F16ED2F130AEC65423A3F880A41630AC7929E72A583CACAF8AF"
+    #s = "5D8B334658592F16ED2F130AEC65423A3F880A41630AC7929E72A583CACAF8AF"
+    s = "411003650FEEC1620ABA34039A008C33A9D6E0D976A9724E97104D67B04AAA8F"
     print("Cypher sample: ", s)
     print("Blocks: ", b:=getBlocks(block_size, s))
 
     input("Press enter to attack...")
-    Pn, Dn = fuzzCk()
+    Pn, Dn = fuzzCk(b=b)
 
     message = ""
     for v in Pn:
@@ -222,7 +227,7 @@ if __name__ == "__main__":
 
     print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
 
-    craft = input("Do you want to craft a custom cypher, which will lead to a desired plaintext ? (y/n)")
+    craft = input("Do you want to craft a custom cypher, which will lead to a desired plaintext ? (y/n) ")
     if craft.lower() == "y":
         desired_plain = input("Enter the desired plain text: ")
         C1 = buildBlock(desired_plain, block_size, Dn)
