@@ -212,9 +212,8 @@ if __name__ == "__main__":
     print(ban)
     block_size = getBlockSize()
     print("Taille des blocks: ", block_size)
-    # s = getNextCypher()
-    #s = "5D8B334658592F16ED2F130AEC65423A3F880A41630AC7929E72A583CACAF8AF"
-    s = "411003650FEEC1620ABA34039A008C33A9D6E0D976A9724E97104D67B04AAA8F"
+    # s = getNextCypher()
+    s = "89F5521A211FF0E015DF5CF04294513A8C4868B3AC517B3F72144F0B8A703B77"
     print("Cypher sample: ", s)
     print("Blocks: ", b:=getBlocks(block_size, s))
 
