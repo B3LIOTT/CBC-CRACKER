@@ -1,3 +1,5 @@
+from utils import *
+from math import ceil
 import requests
 import os
 
@@ -7,11 +9,6 @@ URL = "http://challenge01.root-me.org/realiste/ch12/index.aspx"
 s1 = "Padding Error"
 s2 = "File not found"
 s3 = "Page OK"
-
-ORANGE = "\033[38;5;214m"
-WHITE = "\033[37m"
-GREEN = "\033[32m"
-RED = "\033[31m"
 
 HEX_BYTES = []
 
@@ -26,7 +23,11 @@ def getNextCypher(page_name="Home"):
     return res[home_index-65:home_index-1]
 
 def getRessource(ressource):
-    return requests.get(URL+"?c="+ressource).text
+    try:
+        return requests.get(URL+"?c="+ressource).text
+    except Exception as e:
+        print("Error while sending http reqsuest: ", e)
+        exit(1)
 
 def paddingStatus(response):
     if response.__contains__(s1):
@@ -84,21 +85,6 @@ def modifyBlock(block, val, blocks, ind):
     blocks[block] = res
 
 
-# def paddingSlideTest():
-#     # tester la taille du padding en modifiant petit à petit les valeurs à la fin
-#     n = len(b)
-#     counter = 1
-#     for i in range(1, n+1):
-#         for j in range(block_size*2 - 1, 0, -2):
-#             current_val = b[n-i][j-1:j+1]
-#             hb2 = HEX_BYTES.copy()
-#             hb2.remove(current_val)
-#             new_cypher = blockToCypher(modifyBlock(n-i, hb2[0], b.copy(), j))
-#             printable_cypher = blockToCypher(modifyBlock(n-i, f"{ORANGE}{hb2[0]}{WHITE}", b.copy(), j))
-#             status = paddingStatus(getRessource(new_cypher))
-#             print(status, printable_cypher, " Byte: ", counter)
-#             counter += 1
-
 def guess(c, x, pad, block_size, Pn, Dn):
     # we have x^d = pad (valid padding)
     # hence d = pad^x
@@ -108,6 +94,7 @@ def guess(c, x, pad, block_size, Pn, Dn):
     int_d = pad ^ int_x
 
     Pn[block_size-pad], Dn[block_size-pad] = int_c ^ int_d, int_d
+
 
 def fuzzCk(b, k=0):
     n = len(b)
@@ -165,23 +152,31 @@ def fuzzCk(b, k=0):
     return Pn, Dn
 
 
-def buildBlock(desired_plain, block_size, Dn):
+def buildBlocks(desired_plain, block_size, DNs, n, plain_len):
     # recall that C1^D2 = P2
     # hence if we want C1^D2 = desired_plain
     # we build C1 as C1 = desired_plain^D2
     
     # add padding to the desired plain text to validate the decryption
-    assert(block_size >= len(desired_plain))
+
+    blocks = []
+    pad_len = block_size*n - plain_len
+    N = block_size
     block = ""
-    for i in range(len(desired_plain)):
-        block += f"{ord(desired_plain[i])^Dn[i]:02X}"
+    for k, Dn in enumerate(DNs):
+        if k == n-1:
+            N = plain_len
 
-    pad_len = block_size - len(desired_plain)
-    for j in range(i+1, i+1+pad_len):
-        block += f"{pad_len^Dn[j]:02X}"
+        for i in range(N):
+            block += f"{ord(desired_plain[block_size*k+i])^Dn[i]:02X}"
+        
+        if k == n-1:  # if it is le last block, we have to pad the end of it (when the message lenght isn't a multiple of 16)
+            for j in range(i+1, i+1+pad_len):
+                block += f"{pad_len^Dn[j]:02X}"
+        
+        blocks.append(block)
 
-    return block
-
+    return blocks
 
 
 
@@ -209,20 +204,39 @@ ban = """
 """
 
 if __name__ == "__main__":
+    # url, method, data, cypher, block_size = get_args()
+
+    # if (m:=method.upper()) not in ["GET", "POST"]:
+    #     log_error("Invalid method, use get or post (upper or lower case)")
+    #     exit(1)
+
     print(ban)
-    block_size = getBlockSize()
+    block_size = 16 # getBlockSize()
     print("Taille des blocks: ", block_size)
-    # s = getNextCypher()
-    s = "89F5521A211FF0E015DF5CF04294513A8C4868B3AC517B3F72144F0B8A703B77"
+
+    s = "59873749DC0D3A4ACC7F19D711853685EFCDBFECDF85D6B3AF6171F793CC20B4"
+    #s = "2FF5CE2CC953CB34E6C3D2ADB00A6BA40959A8C2F81BC2E70DB268F882F0351613E22C0B42BAB40FE9C2C952288CE25579C35DB94476B12CA5F235DA6F27FE6E"
+    
     print("Cypher sample: ", s)
     print("Blocks: ", b:=getBlocks(block_size, s))
 
     input("Press enter to attack...")
-    Pn, Dn = fuzzCk(b=b)
 
+    n = len(b)
     message = ""
-    for v in Pn:
-        message += chr(v)
+    saved_datas = {
+        "DNs": [],
+        "PNs": []
+    }
+    _b = ["00"*16] + b
+    for i in range(0, n):
+        sub_b = _b[0:i+2]
+        Pn, Dn = fuzzCk(b=sub_b, k=i)
+        saved_datas["DNs"].append(Dn)
+        saved_datas["PNs"].append(Pn)
+        
+        for v in Pn:
+            message += chr(v)
 
     print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
 
@@ -233,10 +247,14 @@ if __name__ == "__main__":
             break
         elif craft:
             desired_plain = craft
-            C1 = buildBlock(desired_plain, block_size, Dn)
-            C2 = b[1]
-            new_cypher = blockToCypher(C1 + C2)
-            print(f"Crafted Cypher: {new_cypher}")
+            plain_len = len(desired_plain)
+            n_blocks_needed = ceil(plain_len / 16)
+            if n_blocks_needed < len(saved_datas["DNs"]):
+                C1 = buildBlocks(desired_plain, block_size, saved_datas["DNs"][:n_blocks_needed], n_blocks_needed, plain_len)
+                C2 = b[:-1]
+                new_cypher = blockToCypher(C1 + C2)
+                print(f"Crafted Cypher: {new_cypher}")
+            else:
+                print("Error: can't craft this message with previous cracked data because it's too long.")
         else:
             print("Please enter a valid plaintext or '\\q' to quit.")
-
