@@ -4,7 +4,6 @@ import requests
 import os
 
 
-URL = "http://challenge01.root-me.org/realiste/ch12/index.aspx"
 
 s1 = "Padding Error"
 s2 = "File not found"
@@ -17,14 +16,9 @@ for i in range(256):
     HEX_BYTES.append(hex_value)
 
 
-def getNextCypher(page_name="Home"):
-    res = requests.get(URL).text
-    home_index = res.index(f">{page_name}</a>")
-    return res[home_index-65:home_index-1]
-
 def getRessource(ressource):
     try:
-        return requests.get(URL+"?c="+ressource).text
+        return requests.get(URL+"?"+DATA+ressource).text
     except Exception as e:
         print("Error while sending http reqsuest: ", e)
         exit(1)
@@ -204,17 +198,26 @@ ban = """
 """
 
 if __name__ == "__main__":
-    # url, method, data, cypher, block_size = get_args()
+    url, method, data, s, block_size = get_args()
 
-    # if (m:=method.upper()) not in ["GET", "POST"]:
-    #     log_error("Invalid method, use get or post (upper or lower case)")
-    #     exit(1)
+    if (m:=method.upper()) not in ["GET", "POST"]:
+        log_error("Invalid method, use get or post (upper or lower case)")
+        exit(1)
+
+    if m == 'POST':
+        print("No implemented yet.")
+        exit()
+
+    global URL 
+    URL = url
+
+    global DATA
+    DATA = data
 
     print(ban)
-    block_size = 16 # getBlockSize()
     print("Taille des blocks: ", block_size)
 
-    s = "59873749DC0D3A4ACC7F19D711853685EFCDBFECDF85D6B3AF6171F793CC20B4"
+    #s = "59873749DC0D3A4ACC7F19D711853685EFCDBFECDF85D6B3AF6171F793CC20B4"
     #s = "2FF5CE2CC953CB34E6C3D2ADB00A6BA40959A8C2F81BC2E70DB268F882F0351613E22C0B42BAB40FE9C2C952288CE25579C35DB94476B12CA5F235DA6F27FE6E"
     
     print("Cypher sample: ", s)
