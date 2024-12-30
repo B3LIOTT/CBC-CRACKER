@@ -37,7 +37,7 @@ def getBlocks(cypher):
     blocks.append(block)
 
     return blocks
-    
+
 
 def modifyBlock(block, val, blocks, ind):
     assert(len(blocks[block]) > ind and len(blocks) > block and ind > 0)
@@ -131,7 +131,7 @@ def buildBlocks(desired_plain, DNs, n, plain_len):
     block = ""
     for k, Dn in enumerate(DNs):
         if k == n-1:
-            N = plain_len
+            N = plain_len-BLOCK_SIZE*k
 
         for i in range(N):
             block += f"{ord(desired_plain[BLOCK_SIZE*k+i])^Dn[i]:02X}"
@@ -171,32 +171,37 @@ if __name__ == "__main__":
         "PNs": []
     }
     _b = ["00"*16] + b
-    for i in range(0, n):
-        sub_b = _b[0:i+2]
-        Pn, Dn = fuzzCk(b=sub_b, k=i)
-        saved_datas["DNs"].append(Dn)
-        saved_datas["PNs"].append(Pn)
-        
-        for v in Pn:
-            message += chr(v)
+    try:
+        for i in range(0, n):
+            sub_b = _b[0:i+2]
+            Pn, Dn = fuzzCk(b=sub_b, k=i)
+            saved_datas["DNs"].append(Dn)
+            saved_datas["PNs"].append(Pn)
+            
+            for v in Pn:
+                message += chr(v)
 
-    print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
+        print(f"{GREEN} ----------------------- DECRYPTED MESSAGE: {message} -----------------------{WHITE}")
 
-    while True:
-        craft = input("Do you want to craft a custom cypher? Enter your plaintext or type '\\q' to quit: ")
-        if craft.lower() == "\\q":
-            print("Exiting the program.")
-            break
-        elif craft:
-            desired_plain = craft
-            plain_len = len(desired_plain)
-            n_blocks_needed = ceil(plain_len / 16)
-            if n_blocks_needed < len(saved_datas["DNs"]):
-                C1 = buildBlocks(desired_plain, saved_datas["DNs"][:n_blocks_needed], n_blocks_needed, plain_len)
-                C2 = b[:-1]
-                new_cypher = blockToCypher(C1 + C2)
-                print(f"Crafted Cypher: {new_cypher}")
+        while True:
+            craft = input("Do you want to craft a custom cypher? Enter your plaintext or type '\\q' to quit: ")
+            if craft.lower() == "\\q":
+                print("Exiting the program.")
+                break
+            elif craft:
+                desired_plain = craft
+                plain_len = len(desired_plain)
+                n_blocks_needed = ceil(plain_len / 16)
+                if n_blocks_needed < len(saved_datas["DNs"]):
+                    C1 = buildBlocks(desired_plain, saved_datas["DNs"][:n_blocks_needed], n_blocks_needed, plain_len)
+                    C2 = b[:-1]
+                    new_cypher = blockToCypher(C1 + C2)
+                    print(f"Crafted Cypher: {new_cypher}")
+                else:
+                    print("Error: can't craft this message with previous cracked data because it's too long.")
             else:
-                print("Error: can't craft this message with previous cracked data because it's too long.")
-        else:
-            print("Please enter a valid plaintext or '\\q' to quit.")
+                print("Please enter a valid plaintext or '\\q' to quit.")
+
+    except KeyboardInterrupt:
+        print("\nX-X ouch")
+        exit(0)
