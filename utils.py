@@ -73,12 +73,15 @@ def read_data(file_name):
 def get_args() -> list:
     parser = argparse.ArgumentParser(description='Oracle padding attack tool')
     parser.add_argument('-u', '--url', type=str, help='Url pointing to the oracle', required=True)
-    parser.add_argument('-m', '--method', type=str, help='GET or POST method to interact with the oracle', required=True)
-    parser.add_argument('-d', '--data', type=str, help='Data to be sent to interact with the oracle.\nFor data c= with get we have:\nexample.com/index.php?c=\nWith post we have c= in the body\n', required=True)
+    parser.add_argument('-m', '--method', type=str, choices=['GET', 'POST', 'SOCKET'], help='SOCKET, GET or POST method to interact with the oracle', required=True)
+    parser.add_argument('-d', '--data', type=str, help='Data to be sent to interact with the oracle.\nFor data c= with get we have:\nexample.com/index.php?c=\nWith post we have c= in the body\n', required=False)
     parser.add_argument('-c', '--cypher', type=str, help='Cypher text', required=True)
     parser.add_argument('-b', '--block-size', type=int, help='block size (8, 16, 32 ...)', required=True)
     parser.add_argument('-e', '--padding-error', type=str, help='Padding error text, inside the html response', required=True)
     parser.add_argument('-v', '--verbose', action="store_true", help='Display fancy infos')
 
     args = parser.parse_args()
+    if args.method != 'SOCKET' and not args.data:
+        parser.error("-d (--data) argument is required for GET or POST method.")
+
     return args.url, args.method, args.data, args.cypher, args.block_size, args.padding_error, args.verbose

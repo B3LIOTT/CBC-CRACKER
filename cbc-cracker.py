@@ -1,6 +1,7 @@
 from utils import *
 from math import ceil
 import requests
+import socket
 import os
 
 
@@ -10,6 +11,24 @@ for i in range(256):
     hex_value = f"{i:02X}"
     HEX_BYTES.append(hex_value)
 
+
+def connect():
+    try:
+        conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        ip, port_str = URL.split(':')
+        conn.connect((ip, int(port_str)))
+        return conn
+    except Exception as e:
+        log_error(f"Socket connection failed: {e}")
+        exit(1)
+
+def socketRequest(payload):
+    try:
+        CONN.sendall(payload.encode('utf-8'))
+        return CONN.recv(1024).decode()
+    except Exception as e:
+        log_error(f"Error while sending http reqsuest: {e}")
+        exit(1)
 
 def postResquest(payload):
     # TODO
@@ -96,7 +115,7 @@ def fuzzCk(b, k=0):
             printable_cypher = blockToCypher(bcpy)
 
             # verify wether or not the oracle validated the padding
-            pad_err = paddingError(getRequest(new_cypher))
+            pad_err = paddingError(sendRequest(new_cypher))
             if VERBOSE:
                 s = f"Padding Error: {pad_err} | {printable_cypher} | Byte: {BLOCK_SIZE-pad_step+1}\n"
                 os.system(CLEAR)
@@ -148,7 +167,7 @@ def buildBlocks(desired_plain, DNs, n, plain_len):
 
 
 if __name__ == "__main__":
-    URL, method, DATA, s, BLOCK_SIZE, PADDING_ERROR, VERBOSE = get_args()
+    URL, METHOD, DATA, s, BLOCK_SIZE, PADDING_ERROR, VERBOSE = get_args()
 
     print(ban)
     print("Taille des blocks: ", BLOCK_SIZE)
@@ -168,14 +187,19 @@ if __name__ == "__main__":
             data = read_data(file_name=h)
     
     message = ""
+    sendRequest: callable = None
+    CONN: socket.socket = None
     if not data:
-        if (METHOD:=method.upper()) not in ["GET", "POST"]:
-            log_error("Invalid method, use get or post (upper or lower case)")
-            exit(1)
+        if METHOD == 'GET':
+            sendRequest = getRequest
 
         if METHOD == 'POST':
             print("No implemented yet.")
             exit(1)
+        
+        if METHOD == 'SOCKET':
+            CONN = connect()
+            sendRequest = socketRequest
 
         input("Press enter to attack...")
         CLEAR = 'cls' if os.name == 'nt' else 'clear'
@@ -198,9 +222,14 @@ if __name__ == "__main__":
             save_data(saved_data, URL, s)
 
         except KeyboardInterrupt:
+            if CONN:
+                CONN.close()
             print("\nX-X ouch")
             exit(0)
 
+        if CONN:
+            CONN.close()
+        
     else:
         saved_data = data
         for Pn in saved_data["PNs"]:
