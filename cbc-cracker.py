@@ -246,7 +246,7 @@ if __name__ == "__main__":
             elif craft:
                 desired_plain = craft
                 plain_len = len(desired_plain)
-                n_blocks_needed = ceil(plain_len / 16)
+                n_blocks_needed = ceil(plain_len / BLOCK_SIZE)
                 if n_blocks_needed < len(saved_data["DNs"]):
                     C1 = buildBlocks(desired_plain, saved_data["DNs"][:n_blocks_needed], n_blocks_needed, plain_len)
                     C2 = b[n_blocks_needed:n_blocks_needed+1]
